@@ -38,7 +38,7 @@ def main() -> None:
         n_turns=200,
         current=0.5,
         radius=0.04,  # 4 см
-        length=0.08,  # 8 см
+        length=0.30,  # 8 см
         n_quad=96,
     )
     print(f"Источник: {source}")
