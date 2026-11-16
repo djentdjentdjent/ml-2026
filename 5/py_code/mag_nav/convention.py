@@ -92,10 +92,10 @@ class FieldVec(NamedTuple):
 class QuadrantPolicy(str, Enum):
     """Что делать с точками вне первого октанта."""
 
-    STRICT = "strict"  # бросить исключение
-    CLIP = "clip"  # прижать к >= 0
+    STRICT = "strict"   # бросить исключение
+    CLIP = "clip"       # прижать к >= 0
     RELAXED = "relaxed"  # допустить y < 0 (знак восстанавливается через sign(a·b))
-    OFF = "off"  # никакой обработки
+    OFF = "off"         # никакой обработки
 
 
 def dipole_constant(moment_amplitude: float) -> float:
@@ -194,8 +194,3 @@ def broadcast_sigma(sigma: ArrayLike, shape: tuple[int, ...]) -> NDArray[np.floa
     if s.ndim == 0:
         return np.full(shape, float(s))
     return np.broadcast_to(s, shape).astype(np.float64, copy=True)
-
-
-# --------------------------------------------------------------------------- #
-# Утилиты дополнительное
-# --------------------------------------------------------------------------- #
