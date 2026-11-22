@@ -71,6 +71,8 @@ __all__ = [
 ]
 
 _DEFAULT_TOL: Final[float] = 1e-14
+_DEFAULT_W_CLIP_TOL: Final[float] = 0.05
+"""Насколько отрицательным может быть ``w^2``, чтобы точку прижать к z=0, а не отбросить."""
 
 
 # --------------------------------------------------------------------------- #
@@ -213,6 +215,7 @@ def _solve_from_invariants_full(
     *,
     tol: float = _DEFAULT_TOL,
     uvw_tol: float = 1e-6,
+    w_clip_tol: float = _DEFAULT_W_CLIP_TOL,
 ) -> tuple[
     NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], NDArray[np.bool_], NDArray[np.int32]
 ]:
@@ -241,11 +244,23 @@ def _solve_from_invariants_full(
 
     reasons |= np.where(u2_raw >= -uvw_tol, 0, REASON_U_NEG)
     reasons |= np.where(v2_raw >= -uvw_tol, 0, REASON_V_NEG)
-    reasons |= np.where(w2_raw >= -uvw_tol, 0, REASON_W_NEG)
+    # w^2 < 0 у плоскости вращения (z ~ 0) — следствие шума или недипольности
+    # источника. Ближайшее допустимое решение — w = 0, поэтому небольшой
+    # «недолёт» прижимаем к плоскости, а не отбрасываем точку.
+    reasons |= np.where(w2_raw >= -max(uvw_tol, w_clip_tol), 0, REASON_W_NEG)
 
     u = np.sqrt(np.maximum(u2_raw, 0.0))
-    v = np.sign(np.where(np.isclose(ab, 0.0), 1.0, ab)) * np.sqrt(np.maximum(v2_raw, 0.0))
+    # Не np.isclose(ab, 0): его atol=1e-8 на порядки больше реальных a·b (~1e-14 Тл²).
+    v = np.where(ab < 0.0, -1.0, 1.0) * np.sqrt(np.maximum(v2_raw, 0.0))
     w = np.sqrt(np.maximum(w2_raw, 0.0))
+
+    # u^2 + v^2 + w^2 = 1 тождественно, поэтому после w -> 0 имеем
+    # u^2 + v^2 = 1 - w2_raw > 1: перенормируем (u, v) на единичную окружность.
+    clipped = w2_raw < 0.0
+    uv_norm = np.sqrt(u * u + v * v)
+    uv_scale = np.where(clipped & (uv_norm > 0.0), 1.0 / np.where(uv_norm > 0.0, uv_norm, 1.0), 1.0)
+    u = u * uv_scale
+    v = v * uv_scale
 
     uvw = np.stack([u, v, w], axis=-1)
     uvw_norm = safe_norm(uvw, axis=-1)
@@ -268,10 +283,11 @@ def solve_from_invariants(
     *,
     tol: float = _DEFAULT_TOL,
     uvw_tol: float = 1e-6,
+    w_clip_tol: float = _DEFAULT_W_CLIP_TOL,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.bool_], NDArray[np.int32]]:
     """Ядро решения по инвариантам: ``(points, r, valid, reasons)``."""
     points, _uvw, r, valid, reasons = _solve_from_invariants_full(
-        inv, b0, tol=tol, uvw_tol=uvw_tol
+        inv, b0, tol=tol, uvw_tol=uvw_tol, w_clip_tol=w_clip_tol
     )
     return points, r, valid, reasons
 
@@ -283,6 +299,7 @@ def solve_position(
     *,
     tol: float = _DEFAULT_TOL,
     uvw_tol: float = 1e-6,
+    w_clip_tol: float = _DEFAULT_W_CLIP_TOL,
     quadrant_policy: QuadrantPolicy | str = QuadrantPolicy.RELAXED,
     return_uvw_norm: bool = True,
 ) -> PositionSolution:
@@ -300,6 +317,10 @@ def solve_position(
     uvw_tol:
         Допуск на отрицательность подкоренных выражений и на
         ``|uvw| = 1`` (компенсирует шум измерения).
+    w_clip_tol:
+        Если ``-w_clip_tol <= w^2 < 0`` (точка у плоскости вращения), ``w``
+        прижимается к 0, а ``(u, v)`` перенормируются; точка остаётся
+        действительной. ``0`` — прежнее строгое поведение.
     quadrant_policy:
         ``RELAXED`` (по умолчанию) — допускает ``y < 0``;
         ``STRICT`` — требует ``y >= 0`` и обнуляет отрицательный ``y``.
@@ -326,7 +347,7 @@ def solve_position(
 
     inv = ab_invariants(a, b)
     points, uvw, r, valid, reasons = _solve_from_invariants_full(
-        inv, b0, tol=tol, uvw_tol=uvw_tol
+        inv, b0, tol=tol, uvw_tol=uvw_tol, w_clip_tol=w_clip_tol
     )
 
     pol = QuadrantPolicy(quadrant_policy)

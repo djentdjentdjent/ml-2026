@@ -238,7 +238,7 @@ class Solenoid(MagneticSource):
 
     def field_at_phase(self, points: ArrayLike, phase: float = 0.0) -> NDArray[np.float64]:
         rel = self.relative_points(points)
-        if self.quadrant_policy is QuadrantPolicy.STRICT and not np.allclose(self.origin, 0.0):
+        if self.quadrant_policy is QuadrantPolicy.STRICT:
             rel = enforce_quadrant(rel, QuadrantPolicy.STRICT)
 
         axis = self.coil_axis(phase)
