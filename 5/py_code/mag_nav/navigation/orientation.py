@@ -114,13 +114,14 @@ class RotationMatrix:
     def to_euler(self) -> tuple[float, float, float]:
         """``(roll, pitch, yaw)`` в радианах для конвенции ZYX."""
         m = self.matrix
-        pitch = np.arcsin(np.clip(m[2, 0], -1.0, 1.0))
+        # R = Rz(yaw) Ry(pitch) Rx(roll): m[2,0] = -sin(pitch)
+        pitch = np.arcsin(np.clip(-m[2, 0], -1.0, 1.0))
         if np.isclose(abs(np.cos(pitch)), 0.0):   # шарнирный замок
             roll = np.arctan2(-m[1, 2], m[1, 1])
             yaw = 0.0
         else:
-            roll = np.arctan2(-m[2, 1], m[2, 2])
-            yaw = np.arctan2(-m[1, 0], m[0, 0])
+            roll = np.arctan2(m[2, 1], m[2, 2])
+            yaw = np.arctan2(m[1, 0], m[0, 0])
         return float(roll), float(pitch), float(yaw)
 
     def validate(self, tol: float = 1e-9) -> None:

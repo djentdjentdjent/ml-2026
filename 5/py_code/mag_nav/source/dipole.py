@@ -215,9 +215,7 @@ class RotatingDipole(MagneticSource):
 
     @property
     def _check_quadrant(self) -> bool:
-        return self.quadrant_policy is not QuadrantPolicy.OFF and not np.allclose(
-            self.origin, 0.0
-        )
+        return self.quadrant_policy is not QuadrantPolicy.OFF
 
     # -- a/b параметры ------------------------------------------------------- #
     def ab_vectors(

@@ -86,7 +86,8 @@ def orthonormal_frame(axis: ArrayLike) -> NDArray[np.float64]:
         ``p_world = R @ p_local``.
     """
     k = unit(np.asarray(axis, dtype=np.float64))
-    helper = np.array([0.0, 0.0, 1.0]) if abs(k[2]) < 0.9 else np.array([1.0, 0.0, 0.0])
+    # Для оси ~Z helper = Y, чтобы (i, j) = (X, Y), как обещано в конвенции.
+    helper = np.array([0.0, 0.0, 1.0]) if abs(k[2]) < 0.9 else np.array([0.0, 1.0, 0.0])
     i = unit(np.cross(helper, k))
     j = np.cross(k, i)
     return np.stack([i, j, k], axis=1)
@@ -171,7 +172,8 @@ def trace_field_line(
     if not bidirectional:
         return np.asarray(forward)
     backward = integrate(p_start, -1.0)
-    return np.asarray(list(reversed(backward[:-1])) + forward)
+    # backward[0] == start уже есть в forward — без него, иначе нулевой сегмент
+    return np.asarray(list(reversed(backward[1:])) + forward)
 
 
 def field_line_tracer(
