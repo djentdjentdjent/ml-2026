@@ -1,0 +1,249 @@
+ <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Afghanistan Temperature Prediction</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+
+    {% if prediction is not none %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% endif %}
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Afghanistan Temperature Prediction</h1>
+
+    <p class="subtitle">
+        Predict the average monthly temperature using a machine learning model.
+    </p>
+
+    <form method="POST">
+
+        <label for="city">City</label>
+
+        <select name="city" id="city" required>
+            <option value="">Select a city</option>
+
+            {% for city in [
+                "Kabul",
+                "Herat",
+                "Kandahar",
+                "Mazar-e-Sharif",
+                "Jalalabad",
+                "Kunduz",
+                "Bamyan",
+                "Ghazni",
+                "Farah",
+                "Faizabad"
+            ] %}
+
+            <option value="{{ city }}"
+                    {% if selected_city == city %}selected{% endif %}>
+                {{ city }}
+            </option>
+
+            {% endfor %}
+        </select>
+
+        <label for="year">Year</label>
+
+        <input
+            type="number"
+            name="year"
+            id="year"
+            min="2010"
+            max="2035"
+            value="{{ selected_year }}"
+            required
+        >
+
+        <label for="month">Month</label>
+
+        <select name="month" id="month" required>
+            <option value="">Select a month</option>
+
+            <option value="1" {% if selected_month == "1" %}selected{% endif %}>January</option>
+            <option value="2" {% if selected_month == "2" %}selected{% endif %}>February</option>
+            <option value="3" {% if selected_month == "3" %}selected{% endif %}>March</option>
+            <option value="4" {% if selected_month == "4" %}selected{% endif %}>April</option>
+            <option value="5" {% if selected_month == "5" %}selected{% endif %}>May</option>
+            <option value="6" {% if selected_month == "6" %}selected{% endif %}>June</option>
+            <option value="7" {% if selected_month == "7" %}selected{% endif %}>July</option>
+            <option value="8" {% if selected_month == "8" %}selected{% endif %}>August</option>
+            <option value="9" {% if selected_month == "9" %}selected{% endif %}>September</option>
+            <option value="10" {% if selected_month == "10" %}selected{% endif %}>October</option>
+            <option value="11" {% if selected_month == "11" %}selected{% endif %}>November</option>
+            <option value="12" {% if selected_month == "12" %}selected{% endif %}>December</option>
+        </select>
+
+        <button type="submit">
+            Predict Temperature
+        </button>
+
+    </form>
+
+    {% if error %}
+    <div class="error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if prediction is not none %}
+
+    <div class="result">
+        <h2>Prediction Result</h2>
+
+        <p class="result-main">
+            {{ prediction }} °C
+        </p>
+
+        <p>
+            City: {{ selected_city }}<br>
+            Year: {{ selected_year }}<br>
+            Month: {{ selected_month_name }}
+        </p>
+    </div>
+
+    <div class="chart-container">
+        <h2>Historical Temperature</h2>
+
+        <p>
+            {{ selected_city }} — {{ selected_month_name }} (2010–2025)
+        </p>
+
+        <div class="chart-wrapper">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+    </div>
+
+    <div
+        id="chart-data"
+        data-years='{{ chart_years | tojson }}'
+        data-temperatures='{{ chart_temperatures | tojson }}'
+        hidden>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const chartData = document.getElementById("chart-data");
+
+            const years = JSON.parse(chartData.dataset.years);
+            const temperatures = JSON.parse(
+                chartData.dataset.temperatures
+            );
+
+            const ctx = document.getElementById("temperatureChart");
+
+            new Chart(ctx, {
+                type: "line",
+
+                data: {
+                    labels: years,
+
+                    datasets: [
+                        {
+                            label: "Average Temperature (°C)",
+                            data: temperatures,
+                            borderWidth: 2,
+                            tension: 0.3
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: "Year"
+                            }
+                        },
+
+                        y: {
+                            title: {
+                                display: true,
+                                text: "Temperature (°C)"
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    <div class="model-info">
+
+    <h2>Model Information</h2>
+
+    <p>
+        <strong>Model:</strong> Gradient Boosting Regressor
+    </p>
+
+    <p>
+        <strong>Mean Absolute Error:</strong> 1.416 °C
+    </p>
+
+    <p>
+        <strong>R² Score:</strong> 0.976
+    </p>
+
+    <p>
+        <strong>Training Data:</strong> ERA5-Land climate data, 2010–2025
+    </p>
+
+    <p>
+        <strong>Input Features:</strong> City, Year, Month
+    </p>
+
+</div>
+<div class="about-project">
+
+    <h2>About the Project</h2>
+
+    <p>
+        This web application predicts the average monthly temperature
+        for selected cities in Afghanistan using a machine learning model.
+    </p>
+
+    <p>
+        The model was trained on ERA5-Land historical climate data
+        covering the period from 2010 to 2025.
+    </p>
+
+    <p>
+        Users select a city, year, and month.
+        The application then uses the trained Gradient Boosting model
+        to estimate the average monthly temperature.
+    </p>
+
+    <p>
+        The application also displays historical temperature data
+        for the selected city and month.
+    </p>
+
+</div>
+
+    {% endif %}
+
+</div>
+
+</body>
+
+</html>
